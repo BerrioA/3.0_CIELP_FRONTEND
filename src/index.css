@@ -1,0 +1,40 @@
+@import url("https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700&display=swap");
+@import "tailwindcss";
+
+:root {
+  --cielp-bg-soft: #f4f8f7;
+  --cielp-bg-accent: rgba(11, 110, 110, 0.08);
+  --cielp-bg-accent-secondary: rgba(224, 142, 47, 0.1);
+  --cielp-text: #123234;
+}
+
+:root[data-theme="dark"] {
+  --cielp-bg-soft: #0e1a1a;
+  --cielp-bg-accent: rgba(79, 195, 195, 0.2);
+  --cielp-bg-accent-secondary: rgba(242, 182, 111, 0.16);
+  --cielp-text: #e5f5f4;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: "Sora", "Nunito Sans", sans-serif;
+  color: var(--cielp-text);
+  background:
+    radial-gradient(circle at 0% 0%, var(--cielp-bg-accent), transparent 30%),
+    radial-gradient(
+      circle at 100% 100%,
+      var(--cielp-bg-accent-secondary),
+      transparent 35%
+    ),
+    var(--cielp-bg-soft);
+}

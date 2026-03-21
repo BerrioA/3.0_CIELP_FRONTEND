@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="icon"
+      type="image/png"
+      href="/CIELP.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      href="/CIELP.png"
+    />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="color-scheme"
+      content="light dark"
+    />
+    <meta
+      name="theme-color"
+      content="#0b6e6e"
+    />
+    <meta
+      name="theme-color"
+      content="#0e1a1a"
+      media="(prefers-color-scheme: dark)"
+    />
+    <title>CIELP</title>
+    <style>
+      html,
+      body,
+      #root {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        background:
+          radial-gradient(
+            circle at 12% 12%,
+            rgba(13, 127, 126, 0.16),
+            transparent 36%
+          ),
+          radial-gradient(
+            circle at 88% 88%,
+            rgba(229, 147, 57, 0.14),
+            transparent 42%
+          ),
+          #f4f8f7;
+      }
+
+      .cielp-bootstrap-loader {
+        min-height: 100dvh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .cielp-bootstrap-loader__content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .cielp-bootstrap-loader__logo {
+        width: 124px;
+        height: auto;
+        filter: drop-shadow(0 8px 22px rgba(11, 80, 94, 0.2));
+        animation: cielp-bootstrap-float 1.45s ease-in-out infinite;
+      }
+
+      .cielp-bootstrap-loader__track {
+        width: 148px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(17, 79, 95, 0.13);
+        overflow: hidden;
+      }
+
+      .cielp-bootstrap-loader__bar {
+        width: 45%;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(11, 110, 110, 0.9),
+          rgba(233, 161, 69, 0.95)
+        );
+        animation: cielp-bootstrap-progress 1.35s ease-in-out infinite;
+      }
+
+      .cielp-bootstrap-loader__text {
+        margin: 0;
+        color: #114f5f;
+        font-family: Sora, "Nunito Sans", sans-serif;
+        font-size: 0.93rem;
+        font-weight: 600;
+      }
+
+      @keyframes cielp-bootstrap-float {
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-4px) scale(1.03);
+        }
+      }
+
+      @keyframes cielp-bootstrap-progress {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(240%);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div
+        class="cielp-bootstrap-loader"
+        role="status"
+        aria-live="polite"
+      >
+        <div class="cielp-bootstrap-loader__content">
+          <img
+            class="cielp-bootstrap-loader__logo"
+            src="/CIELP.png"
+            alt="CIELP"
+          />
+          <div
+            class="cielp-bootstrap-loader__track"
+            aria-hidden="true"
+          >
+            <div class="cielp-bootstrap-loader__bar"></div>
+          </div>
+          <p class="cielp-bootstrap-loader__text">
+            Cargando experiencia CIELP...
+          </p>
+        </div>
+      </div>
+    </div>
+    <script
+      type="module"
+      src="/src/main.jsx"
+    ></script>
+  </body>
+</html>
