@@ -8,6 +8,7 @@ import {
   loginService,
   logoutService,
   profileService,
+  resolveAccessTokenFromPayload,
   registerTeacherService,
   requestPasswordRecoveryService,
   resetPasswordService,
@@ -166,8 +167,9 @@ export const useAuthStore = create((set, get) => ({
     });
 
     try {
-      await loginService({ email, password });
-      const { token } = await refreshSessionService();
+      const loginResponse = await loginService({ email, password });
+      const loginToken = resolveAccessTokenFromPayload(loginResponse);
+      const token = loginToken || (await refreshSessionService()).token;
 
       setAccessToken(token);
 

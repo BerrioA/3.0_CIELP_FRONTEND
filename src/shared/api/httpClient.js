@@ -28,10 +28,39 @@ const refreshClient = axios.create({
 
 let refreshPromise = null;
 
+const sanitizeAccessToken = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  return trimmedValue.replace(/^Bearer\s+/i, "");
+};
+
+const resolveAccessToken = (payload) => {
+  if (!payload) {
+    return null;
+  }
+
+  if (typeof payload === "string") {
+    return sanitizeAccessToken(payload);
+  }
+
+  return (
+    sanitizeAccessToken(payload.token) ||
+    sanitizeAccessToken(payload.accessToken) ||
+    sanitizeAccessToken(payload.access_token)
+  );
+};
+
 const requestNewAccessToken = async () => {
   try {
     const response = await refreshClient.get("/auth/refresh");
-    const newAccessToken = response.data?.token;
+    const newAccessToken = resolveAccessToken(response.data);
 
     if (!newAccessToken) {
       throw new Error("No se recibio un access token en el refresh.");
@@ -49,7 +78,7 @@ const requestNewAccessToken = async () => {
 };
 
 apiClient.interceptors.request.use((config) => {
-  const token = getAccessToken();
+  const token = sanitizeAccessToken(getAccessToken());
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -91,8 +120,11 @@ apiClient.interceptors.response.use(
         });
       }
 
-      const newToken = await refreshPromise;
-      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      const newToken = sanitizeAccessToken(await refreshPromise);
+
+      if (newToken) {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      }
 
       return apiClient(originalRequest);
     } catch (refreshError) {

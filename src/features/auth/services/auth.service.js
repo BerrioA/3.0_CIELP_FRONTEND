@@ -1,5 +1,37 @@
 import { apiClient, authSessionClient } from "../../../shared/api/httpClient";
 
+const sanitizeAccessToken = (value) => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+
+  return trimmedValue.replace(/^Bearer\s+/i, "");
+};
+
+export const resolveAccessTokenFromPayload = (payload) => {
+  if (!payload) {
+    return null;
+  }
+
+  if (typeof payload === "string") {
+    return sanitizeAccessToken(payload);
+  }
+
+  return (
+    sanitizeAccessToken(payload.token) ||
+    sanitizeAccessToken(payload.accessToken) ||
+    sanitizeAccessToken(payload.access_token) ||
+    sanitizeAccessToken(payload?.data?.token) ||
+    sanitizeAccessToken(payload?.data?.accessToken) ||
+    sanitizeAccessToken(payload?.data?.access_token)
+  );
+};
+
 export const loginService = async ({ email, password }) => {
   const response = await apiClient.post("/auth/login", { email, password });
   return response.data;
@@ -44,7 +76,16 @@ export const profileService = async () => {
 };
 
 export const refreshSessionService = async () => {
-  const token = await authSessionClient.refresh();
+  const token = resolveAccessTokenFromPayload(
+    await authSessionClient.refresh(),
+  );
+
+  if (!token) {
+    throw new Error(
+      "No se recibio un access token valido en la renovacion de sesion.",
+    );
+  }
+
   return { token };
 };
 
