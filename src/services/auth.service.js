@@ -1,4 +1,5 @@
 import bcryptjs from "bcryptjs";
+import { Buffer } from "node:buffer";
 import { randomUUID } from "crypto";
 import { Op } from "sequelize";
 import {
@@ -344,7 +345,7 @@ export const generateRecoveryToken = async (email) => {
   const payload = Buffer.from(data).toString("base64");
 
   return {
-    url: `${process.env.FRONTEND_URL}/reset-password/${encodeURIComponent(payload)}`,
+    url: `${FRONTEND_URL}/reset-password/${encodeURIComponent(payload)}`,
     userEmail: user.email,
   };
 };
@@ -359,7 +360,7 @@ export const resetUserPassword = async (payloadBase64, newPassword) => {
     const parsed = JSON.parse(decoded);
     email = parsed.email;
     code = parsed.code;
-  } catch (err) {
+  } catch {
     throw new Error("El enlace de recuperación es corrupto o inválido.");
   }
 
@@ -467,7 +468,7 @@ export const confirmAccountVerification = async (payloadBase64) => {
     const decoded = JSON.parse(Buffer.from(payloadBase64, "base64").toString());
     email = decoded.email;
     code = decoded.code;
-  } catch (e) {
+  } catch {
     throw new Error("Token de verificación inválido");
   }
 
