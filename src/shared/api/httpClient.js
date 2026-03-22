@@ -53,7 +53,10 @@ const resolveAccessToken = (payload) => {
   return (
     sanitizeAccessToken(payload.token) ||
     sanitizeAccessToken(payload.accessToken) ||
-    sanitizeAccessToken(payload.access_token)
+    sanitizeAccessToken(payload.access_token) ||
+    sanitizeAccessToken(payload?.data?.token) ||
+    sanitizeAccessToken(payload?.data?.accessToken) ||
+    sanitizeAccessToken(payload?.data?.access_token)
   );
 };
 
