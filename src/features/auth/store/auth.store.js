@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import {
   clearAccessToken,
+  getAccessToken,
   setAccessToken,
 } from "../../../shared/lib/sessionToken";
 import { setAuthSessionHandlers } from "../../../shared/lib/authSessionEvents";
@@ -105,7 +106,33 @@ export const useAuthStore = create((set, get) => ({
     set({ isHydrating: true });
 
     try {
-      const { token } = await refreshSessionService();
+      let token = getAccessToken();
+
+      if (token) {
+        try {
+          const user = await profileService();
+
+          set({
+            accessToken: token,
+            user,
+            isAuthenticated: true,
+            authError: null,
+            hasPendingNetworkRecovery: false,
+          });
+
+          return;
+        } catch (profileError) {
+          const statusCode = profileError?.response?.status;
+          if (statusCode && statusCode !== 401 && statusCode !== 403) {
+            throw profileError;
+          }
+
+          clearAccessToken();
+          token = null;
+        }
+      }
+
+      ({ token } = await refreshSessionService());
       const user = await profileService();
 
       set({
