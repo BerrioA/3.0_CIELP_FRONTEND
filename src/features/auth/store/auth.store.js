@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import {
+  clearStoredAuthStatus,
   clearAccessToken,
   getAccessToken,
+  getStoredAuthStatus,
+  setStoredAuthStatus,
   setAccessToken,
 } from "../../../shared/lib/sessionToken";
 import { setAuthSessionHandlers } from "../../../shared/lib/authSessionEvents";
@@ -25,7 +28,7 @@ const authNoticeDismiss = createAutoDismissNotice(5500);
 const initialState = {
   accessToken: null,
   user: null,
-  isAuthenticated: false,
+  isAuthenticated: getStoredAuthStatus(),
   isLoading: false,
   isRegisteringTeacher: false,
   isBootstrapping: true,
@@ -78,6 +81,7 @@ export const useAuthStore = create((set, get) => ({
   bindSessionEvents: () => {
     setAuthSessionHandlers({
       onTokenRefreshed: (token) => {
+        setStoredAuthStatus(true);
         set({
           accessToken: token,
           isAuthenticated: true,
@@ -87,6 +91,7 @@ export const useAuthStore = create((set, get) => ({
       },
       onSessionExpired: () => {
         clearAccessToken();
+        clearStoredAuthStatus();
         useDashboardPreferencesStore.getState().resetPreferences();
         set({
           accessToken: null,
@@ -98,14 +103,33 @@ export const useAuthStore = create((set, get) => ({
     });
   },
 
-  hydrateSession: async () => {
-    if (!get().isBootstrapping || get().isHydrating) {
+  hydrateSession: async ({ allowRefresh = true } = {}) => {
+    if (get().isHydrating) {
       return;
     }
 
-    set({ isHydrating: true });
+    set({ isHydrating: true, isBootstrapping: true });
 
     try {
+      if (!allowRefresh) {
+        const storedAuthStatus = getStoredAuthStatus();
+        const storedToken = getAccessToken();
+
+        if (!storedAuthStatus) {
+          clearAccessToken();
+          clearStoredAuthStatus();
+        }
+
+        set({
+          accessToken: storedToken,
+          isAuthenticated: storedAuthStatus,
+          authError: null,
+          hasPendingNetworkRecovery: false,
+        });
+
+        return;
+      }
+
       let token = getAccessToken();
 
       if (token) {
@@ -119,6 +143,7 @@ export const useAuthStore = create((set, get) => ({
             authError: null,
             hasPendingNetworkRecovery: false,
           });
+          setStoredAuthStatus(true);
 
           return;
         } catch (profileError) {
@@ -128,6 +153,7 @@ export const useAuthStore = create((set, get) => ({
           }
 
           clearAccessToken();
+          clearStoredAuthStatus();
           token = null;
         }
       }
@@ -142,8 +168,10 @@ export const useAuthStore = create((set, get) => ({
         authError: null,
         hasPendingNetworkRecovery: false,
       });
+      setStoredAuthStatus(true);
     } catch (error) {
       clearAccessToken();
+      clearStoredAuthStatus();
       set({
         accessToken: null,
         user: null,
@@ -177,6 +205,7 @@ export const useAuthStore = create((set, get) => ({
         authError: null,
         hasPendingNetworkRecovery: false,
       });
+      setStoredAuthStatus(true);
     } catch (error) {
       set({
         hasPendingNetworkRecovery: !error?.response,
@@ -210,10 +239,12 @@ export const useAuthStore = create((set, get) => ({
         authError: null,
         hasPendingNetworkRecovery: false,
       });
+      setStoredAuthStatus(true);
 
       return { ok: true };
     } catch (error) {
       clearAccessToken();
+      clearStoredAuthStatus();
       const message = normalizeErrorMessage(error);
 
       set({
@@ -515,6 +546,7 @@ export const useAuthStore = create((set, get) => ({
       await logoutService();
     } finally {
       clearAccessToken();
+      clearStoredAuthStatus();
       useDashboardPreferencesStore.getState().resetPreferences();
       set({
         accessToken: null,
