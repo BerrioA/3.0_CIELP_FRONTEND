@@ -346,400 +346,223 @@ function DashboardSpacesPage() {
         {content.description}
       </Typography>
 
-      <Stack
-        direction={{ xs: "column", sm: "row" }}
-        spacing={1}
-        justifyContent="space-between"
-        alignItems={{ xs: "flex-start", sm: "center" }}
-        useFlexGap
-        flexWrap="wrap"
-      >
-        <Stack
-          direction="row"
-          spacing={1}
-          useFlexGap
-          flexWrap="wrap"
-        >
-          <Chip label={`Espacios disponibles: ${spaces.length}`} />
-          {isTeacher ? (
-            <>
-              <Chip
-                label={`Sesiones completadas: ${teacherStats.overview.total_sessions}`}
-                color="primary"
-              />
-              <Chip
-                label={`Minutos acumulados: ${teacherStats.overview.total_minutes_meditated}`}
-              />
-              <Chip
-                label={`Sesión activa: ${activeSession ? "Sí" : "No"}`}
-                color={activeSession ? "success" : "default"}
-              />
-            </>
-          ) : null}
-        </Stack>
-
+      <>
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={1}
-          alignItems={{ xs: "stretch", sm: "center" }}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<RefreshRoundedIcon />}
-            onClick={() => {
-              void fetchSpaces({ force: true });
-              if (isTeacher) {
-                void fetchTeacherStats({ force: true });
-                if (userUid) {
-                  void fetchActiveSession({ force: true, userUid });
-                }
-              }
-            }}
-            disabled={isLoadingSpaces || isLoadingTeacherStats}
-          >
-            Actualizar
-          </Button>
-
-          {isTeacher ? (
-            <Button
-              variant="contained"
-              onClick={() => navigate("/dashboard/espacios/historial")}
-            >
-              Ver mi historial
-            </Button>
-          ) : null}
-        </Stack>
-      </Stack>
-
-      {spacesError ? <Alert severity="error">{spacesError}</Alert> : null}
-
-      <Dialog
-        open={isMoodDialogOpen}
-        onClose={() => {
-          if (isEndingSession) {
-            return;
-          }
-
-          setIsMoodDialogOpen(false);
-          setSelectedMoodScore(null);
-        }}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Feedback post-sesión</DialogTitle>
-        <DialogContent>
-          <Stack
-            spacing={1.2}
-            sx={{ pt: 0.8 }}
-          >
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
-              ¿Cómo se sintió durante y al finalizar esta sesión?
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-            >
-              Seleccione el emoji que mejor describe su estado. Guardaremos
-              automáticamente su cierre con la escala EVA (1 a 10).
-            </Typography>
-
-            <Stack
-              direction="row"
-              spacing={1}
-              useFlexGap
-              flexWrap="wrap"
-            >
-              {moodOptions.map((option) => (
-                <Button
-                  key={`spaces-mood-${option.score}`}
-                  variant={
-                    selectedMoodScore === option.score
-                      ? "contained"
-                      : "outlined"
-                  }
-                  onClick={() => void handleSelectMoodAndFinish(option.score)}
-                  disabled={isEndingSession}
-                  sx={{ minWidth: 96, textTransform: "none" }}
-                >
-                  {option.emoji} {option.score}
-                </Button>
-              ))}
-            </Stack>
-
-            {isEndingSession ? (
-              <Typography
-                variant="caption"
-                color="text.secondary"
-              >
-                Guardando cierre de sesión...
-              </Typography>
-            ) : null}
-          </Stack>
-        </DialogContent>
-        <Box sx={{ px: 3, pb: 2, display: "flex", justifyContent: "flex-end" }}>
-          <Button
-            onClick={() => {
-              setIsMoodDialogOpen(false);
-              setSelectedMoodScore(null);
-            }}
-            disabled={isEndingSession}
-          >
-            Cancelar
-          </Button>
-        </Box>
-      </Dialog>
-
-      {isTeacher ? (
-        <>
-          {teacherStatsError ? (
-            <Alert severity="error">{teacherStatsError}</Alert>
-          ) : null}
-
-          {sessionActionError ? (
-            <Alert severity="error">{sessionActionError}</Alert>
-          ) : null}
-
-          {sessionActionSuccessMessage ? (
-            <Alert severity="success">{sessionActionSuccessMessage}</Alert>
-          ) : null}
-
-          {activeSession ? (
-            <Alert
-              severity="info"
-              action={
-                <Stack
-                  direction="row"
-                  spacing={0.8}
-                >
-                  <Button
-                    color="inherit"
-                    size="small"
-                    startIcon={<PlayCircleRoundedIcon />}
-                    onClick={() => handleOpenImmersiveSpace(activeSpaceId)}
-                  >
-                    Reanudar inmersión
-                  </Button>
-                  <Button
-                    color="inherit"
-                    size="small"
-                    startIcon={<StopCircleRoundedIcon />}
-                    onClick={handleEndSession}
-                    disabled={isEndingSession || isStartingSession}
-                  >
-                    {isEndingSession ? "Finalizando..." : "Finalizar"}
-                  </Button>
-                </Stack>
-              }
-            >
-              Sesión activa en: {activeSpaceName || "Espacio seleccionado"}.
-              Tiempo transcurrido: {formatDurationLabel(elapsedSeconds)}.
-            </Alert>
-          ) : null}
-
-          {lastCompletedSession ? (
-            <Alert severity="success">
-              Última sesión finalizada:{" "}
-              {formatDurationLabel(lastCompletedSession.duration_seconds)} ({" "}
-              {lastCompletedSession.duration_minutes.toFixed(2)} min).
-            </Alert>
-          ) : null}
-        </>
-      ) : (
-        <Alert severity="info">
-          Para tu rol, este módulo funciona en modo catálogo. El inicio y cierre
-          de sesiones está disponible para docentes.
-        </Alert>
-      )}
-
-      {isLoadingSpaces ? (
-        <DashboardSectionCard
-          title="Catálogo de espacios"
-          description="Cargando espacios digitales..."
+          justifyContent="space-between"
+          alignItems={{ xs: "flex-start", sm: "center" }}
+          useFlexGap
+          flexWrap="wrap"
         >
           <Stack
             direction="row"
             spacing={1}
-            alignItems="center"
+            useFlexGap
+            flexWrap="wrap"
           >
-            <CircularProgress size={20} />
-            <Typography
-              variant="body2"
-              color="text.secondary"
-            >
-              Obteniendo catálogo...
-            </Typography>
+            <Chip label={`Espacios disponibles: ${spaces.length}`} />
+            {isTeacher ? (
+              <>
+                <Chip
+                  label={`Sesiones completadas: ${teacherStats.overview.total_sessions}`}
+                  color="primary"
+                />
+                <Chip
+                  label={`Minutos acumulados: ${teacherStats.overview.total_minutes_meditated}`}
+                />
+                <Chip
+                  label={`Sesión activa: ${activeSession ? "Sí" : "No"}`}
+                  color={activeSession ? "success" : "default"}
+                />
+              </>
+            ) : null}
           </Stack>
-        </DashboardSectionCard>
-      ) : null}
 
-      {!isLoadingSpaces && !isTeacher ? (
-        <Paper
-          variant="outlined"
-          sx={{ p: 2, borderRadius: 1.25 }}
-        >
           <Stack
-            direction={{ xs: "column", md: "row" }}
-            spacing={1.2}
-            alignItems={{ xs: "stretch", md: "center" }}
+            direction={{ xs: "column", sm: "row" }}
+            spacing={1}
+            alignItems={{ xs: "stretch", sm: "center" }}
+            sx={{ width: { xs: "100%", sm: "auto" } }}
           >
-            <TextField
-              size="small"
-              label="Buscar por nombre"
-              value={searchTerm}
-              onChange={(event) => {
-                setSearchTerm(event.target.value);
+            <Button
+              variant="outlined"
+              startIcon={<RefreshRoundedIcon />}
+              onClick={() => {
+                void fetchSpaces({ force: true });
+                if (isTeacher) {
+                  void fetchTeacherStats({ force: true });
+                  if (userUid) {
+                    void fetchActiveSession({ force: true, userUid });
+                  }
+                }
               }}
-              placeholder="Ej. Respiración guiada"
-              fullWidth
-            />
-
-            <TextField
-              size="small"
-              select
-              label="Tipo"
-              value={spaceTypeFilter}
-              onChange={(event) => {
-                setSpaceTypeFilter(event.target.value);
-              }}
-              sx={{ minWidth: { xs: "100%", md: 240 } }}
+              disabled={isLoadingSpaces || isLoadingTeacherStats}
             >
-              {availableSpaceTypes.map((type) => (
-                <MenuItem
-                  key={type}
-                  value={type}
-                >
-                  {type === "all" ? "Todos los tipos" : type}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
-        </Paper>
-      ) : null}
+              Actualizar
+            </Button>
 
-      {isTeacher ? (
-        <Alert severity="info">
-          {recommendedTeacherSpace?.id
-            ? `Se está mostrando únicamente el espacio recomendado por su última evaluación MBI: ${recommendedTeacherSpace.name}.`
-            : "No se encontró una recomendación MBI vigente; se muestra el catálogo completo para que pueda continuar su práctica."}
-        </Alert>
-      ) : null}
-
-      {!isLoadingSpaces && visibleSpaces.length > 0 ? (
-        <Stack spacing={1.5}>
-          {visibleSpaces.map((space) => {
-            const isCurrentActive = activeSession?.space_id === space.id;
-            const isBlockedByOtherActiveSession =
-              Boolean(activeSession) && !isCurrentActive;
-
-            return (
-              <Paper
-                key={space.id}
-                variant="outlined"
-                sx={{ p: 2.2, borderRadius: 1.25 }}
+            {isTeacher ? (
+              <Button
+                variant="contained"
+                onClick={() => navigate("/dashboard/espacios/historial")}
               >
-                <Stack spacing={1.1}>
-                  <Stack
-                    direction={{ xs: "column", md: "row" }}
-                    spacing={1}
-                    justifyContent="space-between"
-                    alignItems={{ xs: "flex-start", md: "center" }}
-                  >
-                    <Box>
-                      <Typography variant="h6">{space.name}</Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                      >
-                        {space.description}
-                      </Typography>
-                    </Box>
-
-                    <Chip
-                      label={space.typeLabel}
-                      variant="outlined"
-                    />
-                  </Stack>
-
-                  {space.thumbnail_url ? (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                    >
-                      Recurso visual: {space.thumbnail_url}
-                    </Typography>
-                  ) : null}
-
-                  {isTeacher ? (
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                    >
-                      {isCurrentActive ? (
-                        <Button
-                          variant="contained"
-                          color="error"
-                          startIcon={<StopCircleRoundedIcon />}
-                          onClick={handleEndSession}
-                          disabled={isEndingSession || isStartingSession}
-                        >
-                          {isEndingSession
-                            ? "Finalizando..."
-                            : "Finalizar sesión"}
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="contained"
-                          startIcon={<PlayCircleRoundedIcon />}
-                          onClick={() => handleOpenImmersiveSpace(space.id)}
-                          disabled={
-                            isBlockedByOtherActiveSession ||
-                            isStartingSession ||
-                            isEndingSession
-                          }
-                        >
-                          Abrir inmersión
-                        </Button>
-                      )}
-
-                      {isBlockedByOtherActiveSession ? (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                        >
-                          Ya tienes una sesión activa en otro espacio.
-                        </Typography>
-                      ) : null}
-                    </Stack>
-                  ) : null}
-                </Stack>
-              </Paper>
-            );
-          })}
+                Ver mi historial
+              </Button>
+            ) : null}
+          </Stack>
         </Stack>
-      ) : null}
 
-      {!isLoadingSpaces && visibleSpaces.length === 0 ? (
-        <DashboardSectionCard
-          title={isTeacher ? "Espacios sugeridos" : "Catálogo de espacios"}
-          description={
-            spaces.length === 0
-              ? "No hay espacios activos disponibles en este momento."
-              : "No hay resultados con los filtros aplicados."
-          }
-        />
-      ) : null}
+        {spacesError ? <Alert severity="error">{spacesError}</Alert> : null}
 
-      {isTeacher ? (
-        <DashboardSectionCard
-          title={content.title}
-          description="Resumen de uso personal y trazabilidad de sesiones recientes."
+        <Dialog
+          open={isMoodDialogOpen}
+          onClose={() => {
+            if (isEndingSession) {
+              return;
+            }
+
+            setIsMoodDialogOpen(false);
+            setSelectedMoodScore(null);
+          }}
+          fullWidth
+          maxWidth="sm"
         >
-          {isLoadingTeacherStats ? (
+          <DialogTitle>Feedback post-sesión</DialogTitle>
+          <DialogContent>
+            <Stack
+              spacing={1.2}
+              sx={{ pt: 0.8 }}
+            >
+              <Typography
+                variant="body2"
+                color="text.secondary"
+              >
+                ¿Cómo se sintió durante y al finalizar esta sesión?
+              </Typography>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+              >
+                Seleccione el emoji que mejor describe su estado. Guardaremos
+                automáticamente su cierre con la escala EVA (1 a 10).
+              </Typography>
+
+              <Stack
+                direction="row"
+                spacing={1}
+                useFlexGap
+                flexWrap="wrap"
+              >
+                {moodOptions.map((option) => (
+                  <Button
+                    key={`spaces-mood-${option.score}`}
+                    variant={
+                      selectedMoodScore === option.score
+                        ? "contained"
+                        : "outlined"
+                    }
+                    onClick={() => void handleSelectMoodAndFinish(option.score)}
+                    disabled={isEndingSession}
+                    sx={{ minWidth: 96, textTransform: "none" }}
+                  >
+                    {option.emoji} {option.score}
+                  </Button>
+                ))}
+              </Stack>
+
+              {isEndingSession ? (
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                >
+                  Guardando cierre de sesión...
+                </Typography>
+              ) : null}
+            </Stack>
+          </DialogContent>
+          <Box
+            sx={{ px: 3, pb: 2, display: "flex", justifyContent: "flex-end" }}
+          >
+            <Button
+              onClick={() => {
+                setIsMoodDialogOpen(false);
+                setSelectedMoodScore(null);
+              }}
+              disabled={isEndingSession}
+            >
+              Cancelar
+            </Button>
+          </Box>
+        </Dialog>
+
+        {isTeacher ? (
+          <>
+            {teacherStatsError ? (
+              <Alert severity="error">{teacherStatsError}</Alert>
+            ) : null}
+
+            {sessionActionError ? (
+              <Alert severity="error">{sessionActionError}</Alert>
+            ) : null}
+
+            {sessionActionSuccessMessage ? (
+              <Alert severity="success">{sessionActionSuccessMessage}</Alert>
+            ) : null}
+
+            {activeSession ? (
+              <Alert
+                severity="info"
+                action={
+                  <Stack
+                    direction="row"
+                    spacing={0.8}
+                  >
+                    <Button
+                      color="inherit"
+                      size="small"
+                      startIcon={<PlayCircleRoundedIcon />}
+                      onClick={() => handleOpenImmersiveSpace(activeSpaceId)}
+                    >
+                      Reanudar inmersión
+                    </Button>
+                    <Button
+                      color="inherit"
+                      size="small"
+                      startIcon={<StopCircleRoundedIcon />}
+                      onClick={handleEndSession}
+                      disabled={isEndingSession || isStartingSession}
+                    >
+                      {isEndingSession ? "Finalizando..." : "Finalizar"}
+                    </Button>
+                  </Stack>
+                }
+              >
+                Sesión activa en: {activeSpaceName || "Espacio seleccionado"}.
+                Tiempo transcurrido: {formatDurationLabel(elapsedSeconds)}.
+              </Alert>
+            ) : null}
+
+            {lastCompletedSession ? (
+              <Alert severity="success">
+                Última sesión finalizada:{" "}
+                {formatDurationLabel(lastCompletedSession.duration_seconds)} ({" "}
+                {lastCompletedSession.duration_minutes.toFixed(2)} min).
+              </Alert>
+            ) : null}
+          </>
+        ) : (
+          <Alert severity="info">
+            Para tu rol, este módulo funciona en modo catálogo. El inicio y
+            cierre de sesiones está disponible para docentes.
+          </Alert>
+        )}
+
+        {isLoadingSpaces ? (
+          <DashboardSectionCard
+            title="Catálogo de espacios"
+            description="Cargando espacios digitales..."
+          >
             <Stack
               direction="row"
               spacing={1}
@@ -750,97 +573,279 @@ function DashboardSpacesPage() {
                 variant="body2"
                 color="text.secondary"
               >
-                Cargando estadísticas...
+                Obteniendo catálogo...
               </Typography>
             </Stack>
-          ) : (
-            <Stack spacing={1.2}>
+          </DashboardSectionCard>
+        ) : null}
+
+        {!isLoadingSpaces && !isTeacher ? (
+          <Paper
+            variant="outlined"
+            sx={{ p: 2, borderRadius: 1.25 }}
+          >
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={1.2}
+              alignItems={{ xs: "stretch", md: "center" }}
+            >
+              <TextField
+                size="small"
+                label="Buscar por nombre"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                }}
+                placeholder="Ej. Respiración guiada"
+                fullWidth
+              />
+
+              <TextField
+                size="small"
+                select
+                label="Tipo"
+                value={spaceTypeFilter}
+                onChange={(event) => {
+                  setSpaceTypeFilter(event.target.value);
+                }}
+                sx={{ minWidth: { xs: "100%", md: 240 } }}
+              >
+                {availableSpaceTypes.map((type) => (
+                  <MenuItem
+                    key={type}
+                    value={type}
+                  >
+                    {type === "all" ? "Todos los tipos" : type}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Stack>
+          </Paper>
+        ) : null}
+
+        {isTeacher ? (
+          <Alert severity="info">
+            {recommendedTeacherSpace?.id
+              ? `Se está mostrando únicamente el espacio recomendado por su última evaluación MBI: ${recommendedTeacherSpace.name}.`
+              : "No se encontró una recomendación MBI vigente; se muestra el catálogo completo para que pueda continuar su práctica."}
+          </Alert>
+        ) : null}
+
+        {!isLoadingSpaces && visibleSpaces.length > 0 ? (
+          <Stack spacing={1.5}>
+            {visibleSpaces.map((space) => {
+              const isCurrentActive = activeSession?.space_id === space.id;
+              const isBlockedByOtherActiveSession =
+                Boolean(activeSession) && !isCurrentActive;
+
+              return (
+                <Paper
+                  key={space.id}
+                  variant="outlined"
+                  sx={{ p: 2.2, borderRadius: 1.25 }}
+                >
+                  <Stack spacing={1.1}>
+                    <Stack
+                      direction={{ xs: "column", md: "row" }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: "flex-start", md: "center" }}
+                    >
+                      <Box>
+                        <Typography variant="h6">{space.name}</Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                        >
+                          {space.description}
+                        </Typography>
+                      </Box>
+
+                      <Chip
+                        label={space.typeLabel}
+                        variant="outlined"
+                      />
+                    </Stack>
+
+                    {space.thumbnail_url ? (
+                      <Typography
+                        variant="caption"
+                        color="text.secondary"
+                      >
+                        Recurso visual: {space.thumbnail_url}
+                      </Typography>
+                    ) : null}
+
+                    {isTeacher ? (
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                      >
+                        {isCurrentActive ? (
+                          <Button
+                            variant="contained"
+                            color="error"
+                            startIcon={<StopCircleRoundedIcon />}
+                            onClick={handleEndSession}
+                            disabled={isEndingSession || isStartingSession}
+                          >
+                            {isEndingSession
+                              ? "Finalizando..."
+                              : "Finalizar sesión"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            startIcon={<PlayCircleRoundedIcon />}
+                            onClick={() => handleOpenImmersiveSpace(space.id)}
+                            disabled={
+                              isBlockedByOtherActiveSession ||
+                              isStartingSession ||
+                              isEndingSession
+                            }
+                          >
+                            Abrir inmersión
+                          </Button>
+                        )}
+
+                        {isBlockedByOtherActiveSession ? (
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                          >
+                            Ya tienes una sesión activa en otro espacio.
+                          </Typography>
+                        ) : null}
+                      </Stack>
+                    ) : null}
+                  </Stack>
+                </Paper>
+              );
+            })}
+          </Stack>
+        ) : null}
+
+        {!isLoadingSpaces && visibleSpaces.length === 0 ? (
+          <DashboardSectionCard
+            title={isTeacher ? "Espacios sugeridos" : "Catálogo de espacios"}
+            description={
+              spaces.length === 0
+                ? "No hay espacios activos disponibles en este momento."
+                : "No hay resultados con los filtros aplicados."
+            }
+          />
+        ) : null}
+
+        {isTeacher ? (
+          <DashboardSectionCard
+            title={content.title}
+            description="Resumen de uso personal y trazabilidad de sesiones recientes."
+          >
+            {isLoadingTeacherStats ? (
               <Stack
                 direction="row"
                 spacing={1}
-                useFlexGap
-                flexWrap="wrap"
+                alignItems="center"
               >
-                <Chip
-                  label={`Favorito: ${teacherStats.overview.favorite_space}`}
-                />
-                <Chip
-                  label={`Sesiones: ${teacherStats.overview.total_sessions}`}
-                  color="primary"
-                />
-                <Chip
-                  label={`Total minutos: ${teacherStats.overview.total_minutes_meditated}`}
-                />
+                <CircularProgress size={20} />
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                >
+                  Cargando estadísticas...
+                </Typography>
               </Stack>
-
-              <Divider />
-
-              <Typography
-                variant="subtitle2"
-                color="text.secondary"
-              >
-                Evolución semanal (minutos)
-              </Typography>
-
-              {!weeklyEvolutionHasData ? (
-                <Alert severity="info">
-                  Aún no hay suficientes datos para graficar la evolución
-                  semanal.
-                </Alert>
-              ) : (
-                <Box sx={{ height: 220 }}>
-                  <BarChart
-                    xAxis={[
-                      {
-                        scaleType: "band",
-                        data: weeklyEvolution.map((item) => item.week_label),
-                      },
-                    ]}
-                    series={[
-                      {
-                        data: weeklyEvolution.map((item) => item.total_minutes),
-                        label: "Minutos",
-                        color: "#1976d2",
-                      },
-                    ]}
-                    margin={{ top: 16, right: 10, bottom: 30, left: 30 }}
-                    height={220}
-                    slotProps={{ legend: { hidden: true } }}
+            ) : (
+              <Stack spacing={1.2}>
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  useFlexGap
+                  flexWrap="wrap"
+                >
+                  <Chip
+                    label={`Favorito: ${teacherStats.overview.favorite_space}`}
                   />
-                </Box>
-              )}
+                  <Chip
+                    label={`Sesiones: ${teacherStats.overview.total_sessions}`}
+                    color="primary"
+                  />
+                  <Chip
+                    label={`Total minutos: ${teacherStats.overview.total_minutes_meditated}`}
+                  />
+                </Stack>
 
-              <Divider />
+                <Divider />
 
-              <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1}
-                alignItems={{ xs: "stretch", sm: "center" }}
-                justifyContent="space-between"
-              >
                 <Typography
                   variant="subtitle2"
                   color="text.secondary"
                 >
-                  Historial de práctica
+                  Evolución semanal (minutos)
                 </Typography>
-                <Button
-                  variant="outlined"
-                  size="small"
-                  onClick={() => navigate("/dashboard/espacios/historial")}
+
+                {!weeklyEvolutionHasData ? (
+                  <Alert severity="info">
+                    Aún no hay suficientes datos para graficar la evolución
+                    semanal.
+                  </Alert>
+                ) : (
+                  <Box sx={{ height: 220 }}>
+                    <BarChart
+                      xAxis={[
+                        {
+                          scaleType: "band",
+                          data: weeklyEvolution.map((item) => item.week_label),
+                        },
+                      ]}
+                      series={[
+                        {
+                          data: weeklyEvolution.map(
+                            (item) => item.total_minutes,
+                          ),
+                          label: "Minutos",
+                          color: "#1976d2",
+                        },
+                      ]}
+                      margin={{ top: 16, right: 10, bottom: 30, left: 30 }}
+                      height={220}
+                      slotProps={{ legend: { hidden: true } }}
+                    />
+                  </Box>
+                )}
+
+                <Divider />
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems={{ xs: "stretch", sm: "center" }}
+                  justifyContent="space-between"
                 >
-                  Ver historial reciente
-                </Button>
+                  <Typography
+                    variant="subtitle2"
+                    color="text.secondary"
+                  >
+                    Historial de práctica
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => navigate("/dashboard/espacios/historial")}
+                  >
+                    Ver historial reciente
+                  </Button>
+                </Stack>
               </Stack>
-            </Stack>
-          )}
-        </DashboardSectionCard>
-      ) : (
-        <DashboardSectionCard
-          title={content.title}
-          description={content.description}
-        />
-      )}
+            )}
+          </DashboardSectionCard>
+        ) : (
+          <DashboardSectionCard
+            title={content.title}
+            description={content.description}
+          />
+        )}
+      </>
     </Stack>
   );
 }

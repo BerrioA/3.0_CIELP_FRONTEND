@@ -7,7 +7,10 @@ import {
   setStoredAuthStatus,
   setAccessToken,
 } from "../../../shared/lib/sessionToken";
-import { setAuthSessionHandlers } from "../../../shared/lib/authSessionEvents";
+import {
+  notifySessionExpired,
+  setAuthSessionHandlers,
+} from "../../../shared/lib/authSessionEvents";
 import {
   loginService,
   logoutService,
@@ -81,6 +84,7 @@ export const useAuthStore = create((set, get) => ({
   bindSessionEvents: () => {
     setAuthSessionHandlers({
       onTokenRefreshed: (token) => {
+        setAccessToken(token);
         setStoredAuthStatus(true);
         set({
           accessToken: token,
@@ -108,7 +112,10 @@ export const useAuthStore = create((set, get) => ({
       return;
     }
 
-    set({ isHydrating: true, isBootstrapping: true });
+    set((state) => ({
+      isHydrating: true,
+      isBootstrapping: state.isBootstrapping,
+    }));
 
     try {
       if (!allowRefresh) {
@@ -545,16 +552,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       await logoutService();
     } finally {
-      clearAccessToken();
-      clearStoredAuthStatus();
-      useDashboardPreferencesStore.getState().resetPreferences();
-      set({
-        accessToken: null,
-        user: null,
-        isAuthenticated: false,
-        authError: null,
-        hasPendingNetworkRecovery: false,
-      });
+      notifySessionExpired();
     }
   },
 }));

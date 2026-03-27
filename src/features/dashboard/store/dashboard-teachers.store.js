@@ -7,8 +7,36 @@ import {
   getTeachersListApi,
   registerTeacherApi,
 } from "../services/teachers.service";
+import {
+  clearSessionCache,
+  readSessionCacheWithMeta,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
 
 const teacherNoticeDismiss = createAutoDismissNotice(5500);
+const DASHBOARD_TEACHERS_CACHE_KEY = "cielp_dashboard_teachers_cache_v1";
+const DASHBOARD_TEACHERS_CACHE_TTL_MS = 4 * 60 * 1000;
+
+const initialCacheEntry = readSessionCacheWithMeta(
+  DASHBOARD_TEACHERS_CACHE_KEY,
+  DASHBOARD_TEACHERS_CACHE_TTL_MS,
+);
+
+const initialCache = initialCacheEntry?.payload || {};
+const isInitialCacheStale = Boolean(initialCacheEntry?.isExpired);
+
+const persistTeachersCache = (partialPayload = {}) => {
+  const currentCache =
+    readSessionCacheWithMeta(
+      DASHBOARD_TEACHERS_CACHE_KEY,
+      DASHBOARD_TEACHERS_CACHE_TTL_MS,
+    )?.payload || {};
+
+  writeSessionCache(DASHBOARD_TEACHERS_CACHE_KEY, {
+    ...currentCache,
+    ...partialPayload,
+  });
+};
 
 const normalizeErrorMessage = (error, fallback) =>
   error?.response?.data?.message ||
@@ -17,15 +45,16 @@ const normalizeErrorMessage = (error, fallback) =>
   "No fue posible completar la solicitud.";
 
 export const useDashboardTeachersStore = create((set, get) => ({
-  teachers: [],
+  teachers: Array.isArray(initialCache?.teachers) ? initialCache.teachers : [],
   isLoadingTeachers: false,
   teachersError: null,
-  hasLoadedTeachers: false,
+  hasLoadedTeachers: Array.isArray(initialCache?.teachers),
 
   selectedTeacherId: "",
-  selectedTeacherProfile: null,
+  selectedTeacherProfile: initialCache?.selectedTeacherProfile || null,
   isLoadingSelectedTeacherProfile: false,
   selectedTeacherProfileError: null,
+  isModuleCacheStale: isInitialCacheStale,
 
   isRegisteringTeacher: false,
   registerTeacherError: null,
@@ -46,12 +75,14 @@ export const useDashboardTeachersStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedTeachers && !force) {
+    if (get().hasLoadedTeachers && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedTeachers;
+
     set({
-      isLoadingTeachers: true,
+      isLoadingTeachers: hasCachedData ? false : true,
       teachersError: null,
     });
 
@@ -63,6 +94,11 @@ export const useDashboardTeachersStore = create((set, get) => ({
         isLoadingTeachers: false,
         teachersError: null,
         hasLoadedTeachers: true,
+        isModuleCacheStale: false,
+      });
+
+      persistTeachersCache({
+        teachers: Array.isArray(response) ? response : [],
       });
     } catch (error) {
       set({
@@ -95,7 +131,10 @@ export const useDashboardTeachersStore = create((set, get) => ({
         selectedTeacherProfile: response || null,
         isLoadingSelectedTeacherProfile: false,
         selectedTeacherProfileError: null,
+        isModuleCacheStale: false,
       });
+
+      persistTeachersCache({ selectedTeacherProfile: response || null });
     } catch (error) {
       set({
         selectedTeacherProfile: null,
@@ -130,6 +169,7 @@ export const useDashboardTeachersStore = create((set, get) => ({
         isRegisteringTeacher: false,
         registerTeacherError: null,
         registerTeacherSuccessMessage: message,
+        isModuleCacheStale: true,
       });
 
       teacherNoticeDismiss.schedule(() => {
@@ -191,6 +231,7 @@ export const useDashboardTeachersStore = create((set, get) => ({
           get().selectedTeacherId === teacherId
             ? null
             : get().selectedTeacherProfile,
+        isModuleCacheStale: true,
       });
 
       teacherNoticeDismiss.schedule(() => {
@@ -228,4 +269,12 @@ export const useDashboardTeachersStore = create((set, get) => ({
       deleteTeacherError: null,
       deleteTeacherSuccessMessage: null,
     }),
+
+  clearTeachersModuleCache: () => {
+    clearSessionCache(DASHBOARD_TEACHERS_CACHE_KEY);
+    set({
+      hasLoadedTeachers: false,
+      isModuleCacheStale: true,
+    });
+  },
 }));

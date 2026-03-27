@@ -1,5 +1,10 @@
 import { create } from "zustand";
 import { getGlobalAnalyticsService } from "../services/analytics.service";
+import {
+  clearSessionCache,
+  readSessionCacheWithMeta,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
 
 export const GLOBAL_ANALYTICS_PERIODS = {
   TODAY: "today",
@@ -7,16 +12,42 @@ export const GLOBAL_ANALYTICS_PERIODS = {
   MONTH: "month",
 };
 
+const DASHBOARD_ANALYTICS_CACHE_KEY = "cielp_dashboard_analytics_cache_v1";
+const DASHBOARD_ANALYTICS_CACHE_TTL_MS = 2 * 60 * 1000;
+
+const initialCacheEntry = readSessionCacheWithMeta(
+  DASHBOARD_ANALYTICS_CACHE_KEY,
+  DASHBOARD_ANALYTICS_CACHE_TTL_MS,
+);
+const initialCache = initialCacheEntry?.payload || {};
+const isInitialCacheStale = Boolean(initialCacheEntry?.isExpired);
+
+const persistAnalyticsCache = (partialPayload = {}) => {
+  const currentCache =
+    readSessionCacheWithMeta(
+      DASHBOARD_ANALYTICS_CACHE_KEY,
+      DASHBOARD_ANALYTICS_CACHE_TTL_MS,
+    )?.payload || {};
+
+  writeSessionCache(DASHBOARD_ANALYTICS_CACHE_KEY, {
+    ...currentCache,
+    ...partialPayload,
+  });
+};
+
 const initialState = {
-  globalAnalytics: null,
-  globalAnalyticsComparison: null,
-  globalAnalyticsPeriodMeta: null,
-  executiveMvpAnalytics: null,
-  selectedGlobalPeriod: GLOBAL_ANALYTICS_PERIODS.WEEK,
-  analyticsByPeriod: {},
+  globalAnalytics: initialCache?.globalAnalytics || null,
+  globalAnalyticsComparison: initialCache?.globalAnalyticsComparison || null,
+  globalAnalyticsPeriodMeta: initialCache?.globalAnalyticsPeriodMeta || null,
+  executiveMvpAnalytics: initialCache?.executiveMvpAnalytics || null,
+  selectedGlobalPeriod:
+    initialCache?.selectedGlobalPeriod || GLOBAL_ANALYTICS_PERIODS.WEEK,
+  analyticsByPeriod: initialCache?.analyticsByPeriod || {},
   isLoadingGlobalAnalytics: false,
   globalAnalyticsError: null,
-  hasLoadedGlobalAnalytics: false,
+  hasLoadedGlobalAnalytics:
+    Object.keys(initialCache?.analyticsByPeriod || {}).length > 0,
+  isModuleCacheStale: isInitialCacheStale,
 };
 
 const normalizeErrorMessage = (error) => {
@@ -42,6 +73,7 @@ export const useDashboardAnalyticsStore = create((set, get) => ({
       executiveMvpAnalytics:
         get().analyticsByPeriod[period]?.mvpEjecutivo || null,
       globalAnalyticsError: null,
+      isModuleCacheStale: get().isModuleCacheStale,
     }),
 
   fetchGlobalAnalytics: async ({ force = false, period } = {}) => {
@@ -52,7 +84,9 @@ export const useDashboardAnalyticsStore = create((set, get) => ({
     const effectivePeriod = period || get().selectedGlobalPeriod;
     const cachedPeriodData = get().analyticsByPeriod[effectivePeriod];
 
-    if (cachedPeriodData && !force) {
+    const hasCachedPeriodData = Boolean(cachedPeriodData);
+
+    if (cachedPeriodData && !force && !get().isModuleCacheStale) {
       set({
         selectedGlobalPeriod: effectivePeriod,
         globalAnalytics: cachedPeriodData.impacto,
@@ -66,7 +100,7 @@ export const useDashboardAnalyticsStore = create((set, get) => ({
 
     set({
       selectedGlobalPeriod: effectivePeriod,
-      isLoadingGlobalAnalytics: true,
+      isLoadingGlobalAnalytics: hasCachedPeriodData ? false : true,
       globalAnalyticsError: null,
     });
 
@@ -100,6 +134,16 @@ export const useDashboardAnalyticsStore = create((set, get) => ({
         isLoadingGlobalAnalytics: false,
         globalAnalyticsError: null,
         hasLoadedGlobalAnalytics: true,
+        isModuleCacheStale: false,
+      });
+
+      persistAnalyticsCache({
+        selectedGlobalPeriod: effectivePeriod,
+        globalAnalytics: impactoInstitucional,
+        globalAnalyticsComparison: comparativoPeriodoAnterior,
+        globalAnalyticsPeriodMeta: periodMeta,
+        executiveMvpAnalytics: executiveMvp,
+        analyticsByPeriod: nextAnalyticsByPeriod,
       });
 
       return nextAnalyticsByPeriod[effectivePeriod];
@@ -113,5 +157,8 @@ export const useDashboardAnalyticsStore = create((set, get) => ({
     }
   },
 
-  resetGlobalAnalytics: () => set({ ...initialState }),
+  resetGlobalAnalytics: () => {
+    clearSessionCache(DASHBOARD_ANALYTICS_CACHE_KEY);
+    set({ ...initialState, analyticsByPeriod: {}, isModuleCacheStale: true });
+  },
 }));

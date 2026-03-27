@@ -13,8 +13,11 @@ import { Link as RouterLink, useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
   { id: "home", item: "Inicio", href: "/" },
-  { id: "about", item: "Quienes Somos", href: "/#quienes-somos" },
-  { id: "login", item: "Iniciar Sesión", href: "/login" },
+  { id: "about", item: "Quiénes somos", href: "/#quienes-somos" },
+  { id: "benefits", item: "Beneficios", href: "/#beneficios" },
+  { id: "faq", item: "FAQ", href: "/#faq" },
+  { id: "contact", item: "Contacto", href: "/#contacto" },
+  { id: "login", item: "Iniciar sesión", href: "/login" },
 ];
 
 function PublicNavbar() {
@@ -50,8 +53,9 @@ function PublicNavbar() {
     navigate("/");
   };
 
-  const scrollToAboutSection = () => {
-    const section = document.getElementById("quienes-somos");
+  const scrollToSection = (sectionHash) => {
+    const sectionId = sectionHash.replace("#", "");
+    const section = document.getElementById(sectionId);
 
     if (!section) {
       return;
@@ -64,17 +68,17 @@ function PublicNavbar() {
     window.scrollTo({ top, behavior: "smooth" });
   };
 
-  const handleAboutClick = (event) => {
+  const handleAnchorClick = (event, hash) => {
     event.preventDefault();
     handleCloseMenu();
 
     if (isHomeRoute) {
-      window.history.replaceState(null, "", "/#quienes-somos");
-      scrollToAboutSection();
+      window.history.replaceState(null, "", `/${hash}`);
+      scrollToSection(hash);
       return;
     }
 
-    navigate({ pathname: "/", hash: "#quienes-somos" });
+    navigate({ pathname: "/", hash });
   };
 
   const shouldHideItem = (itemId) => {
@@ -143,10 +147,11 @@ function PublicNavbar() {
               component={RouterLink}
               to={item.href}
               onClick={
-                item.id === "about"
-                  ? handleAboutClick
-                  : item.id === "home"
-                    ? handleHomeClick
+                item.id === "home"
+                  ? handleHomeClick
+                  : item.href.startsWith("/#")
+                    ? (event) =>
+                        handleAnchorClick(event, item.href.replace("/", ""))
                     : undefined
               }
               color="inherit"
@@ -221,10 +226,11 @@ function PublicNavbar() {
                 component={RouterLink}
                 to={item.href}
                 onClick={
-                  item.id === "about"
-                    ? handleAboutClick
-                    : item.id === "home"
-                      ? handleHomeClick
+                  item.id === "home"
+                    ? handleHomeClick
+                    : item.href.startsWith("/#")
+                      ? (event) =>
+                          handleAnchorClick(event, item.href.replace("/", ""))
                       : handleCloseMenu
                 }
                 sx={{

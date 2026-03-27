@@ -9,6 +9,36 @@ import {
   getTeachersApi,
   submitMbiTestApi,
 } from "../services/mbi.service";
+import {
+  clearSessionCache,
+  readSessionCache,
+  readSessionCacheWithMeta,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
+
+const DASHBOARD_MBI_CACHE_KEY = "cielp_dashboard_mbi_cache_v1";
+const DASHBOARD_MBI_CACHE_TTL_MS = 6 * 60 * 1000;
+
+const initialCacheEntry = readSessionCacheWithMeta(
+  DASHBOARD_MBI_CACHE_KEY,
+  DASHBOARD_MBI_CACHE_TTL_MS,
+);
+const isInitialCacheStale = Boolean(initialCacheEntry?.isExpired);
+
+const readDashboardMbiCache = () =>
+  readSessionCache(DASHBOARD_MBI_CACHE_KEY, DASHBOARD_MBI_CACHE_TTL_MS);
+
+const persistDashboardMbiCache = (partialPayload = {}) => {
+  const currentCache = readDashboardMbiCache() || {};
+
+  writeSessionCache(DASHBOARD_MBI_CACHE_KEY, {
+    ...currentCache,
+    ...partialPayload,
+  });
+};
+
+const initialCache =
+  initialCacheEntry?.payload || readDashboardMbiCache() || {};
 
 const normalizeErrorMessage = (error, fallback) =>
   error?.response?.data?.message ||
@@ -66,20 +96,24 @@ const normalizeMbiHistory = (historyPayload) => {
 };
 
 export const useDashboardMbiStore = create((set, get) => ({
-  questions: [],
+  questions: Array.isArray(initialCache?.questions)
+    ? initialCache.questions
+    : [],
   isLoadingQuestions: false,
   questionsError: null,
-  hasLoadedQuestions: false,
+  hasLoadedQuestions: Array.isArray(initialCache?.questions),
 
-  myHistory: [],
+  myHistory: Array.isArray(initialCache?.myHistory)
+    ? initialCache.myHistory
+    : [],
   isLoadingMyHistory: false,
   myHistoryError: null,
-  hasLoadedMyHistory: false,
+  hasLoadedMyHistory: Array.isArray(initialCache?.myHistory),
 
-  teachers: [],
+  teachers: Array.isArray(initialCache?.teachers) ? initialCache.teachers : [],
   isLoadingTeachers: false,
   teachersError: null,
-  hasLoadedTeachers: false,
+  hasLoadedTeachers: Array.isArray(initialCache?.teachers),
 
   selectedTeacherId: "",
   selectedTeacherProfile: null,
@@ -94,13 +128,14 @@ export const useDashboardMbiStore = create((set, get) => ({
   submitMbiTestSuccessMessage: null,
   lastMbiResult: null,
 
-  mbiRetestStatus: null,
+  mbiRetestStatus: initialCache?.mbiRetestStatus || null,
   isLoadingMbiRetestStatus: false,
   mbiRetestStatusError: null,
 
-  mbiProgressComparison: null,
+  mbiProgressComparison: initialCache?.mbiProgressComparison || null,
   isLoadingMbiProgressComparison: false,
   mbiProgressComparisonError: null,
+  isModuleCacheStale: isInitialCacheStale,
 
   setSelectedTeacherId: (teacherId) =>
     set({
@@ -148,12 +183,14 @@ export const useDashboardMbiStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedQuestions && !force) {
+    if (get().hasLoadedQuestions && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedQuestions;
+
     set({
-      isLoadingQuestions: true,
+      isLoadingQuestions: hasCachedData ? false : true,
       questionsError: null,
     });
 
@@ -164,6 +201,11 @@ export const useDashboardMbiStore = create((set, get) => ({
         isLoadingQuestions: false,
         questionsError: null,
         hasLoadedQuestions: true,
+        isModuleCacheStale: false,
+      });
+
+      persistDashboardMbiCache({
+        questions: Array.isArray(response?.data) ? response.data : [],
       });
     } catch (error) {
       set({
@@ -181,12 +223,14 @@ export const useDashboardMbiStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedMyHistory && !force) {
+    if (get().hasLoadedMyHistory && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedMyHistory;
+
     set({
-      isLoadingMyHistory: true,
+      isLoadingMyHistory: hasCachedData ? false : true,
       myHistoryError: null,
     });
 
@@ -199,7 +243,10 @@ export const useDashboardMbiStore = create((set, get) => ({
         isLoadingMyHistory: false,
         myHistoryError: null,
         hasLoadedMyHistory: true,
+        isModuleCacheStale: false,
       });
+
+      persistDashboardMbiCache({ myHistory: normalizedHistory });
     } catch (error) {
       set({
         isLoadingMyHistory: false,
@@ -216,12 +263,14 @@ export const useDashboardMbiStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedTeachers && !force) {
+    if (get().hasLoadedTeachers && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedTeachers;
+
     set({
-      isLoadingTeachers: true,
+      isLoadingTeachers: hasCachedData ? false : true,
       teachersError: null,
     });
 
@@ -232,6 +281,11 @@ export const useDashboardMbiStore = create((set, get) => ({
         isLoadingTeachers: false,
         teachersError: null,
         hasLoadedTeachers: true,
+        isModuleCacheStale: false,
+      });
+
+      persistDashboardMbiCache({
+        teachers: Array.isArray(response) ? response : [],
       });
     } catch (error) {
       set({
@@ -334,12 +388,14 @@ export const useDashboardMbiStore = create((set, get) => ({
       return;
     }
 
-    if (get().mbiRetestStatus && !force) {
+    if (get().mbiRetestStatus && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = Boolean(get().mbiRetestStatus);
+
     set({
-      isLoadingMbiRetestStatus: true,
+      isLoadingMbiRetestStatus: hasCachedData ? false : true,
       mbiRetestStatusError: null,
     });
 
@@ -350,7 +406,10 @@ export const useDashboardMbiStore = create((set, get) => ({
         mbiRetestStatus: response?.data || null,
         isLoadingMbiRetestStatus: false,
         mbiRetestStatusError: null,
+        isModuleCacheStale: false,
       });
+
+      persistDashboardMbiCache({ mbiRetestStatus: response?.data || null });
     } catch (error) {
       set({
         isLoadingMbiRetestStatus: false,
@@ -367,12 +426,14 @@ export const useDashboardMbiStore = create((set, get) => ({
       return;
     }
 
-    if (get().mbiProgressComparison && !force) {
+    if (get().mbiProgressComparison && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = Boolean(get().mbiProgressComparison);
+
     set({
-      isLoadingMbiProgressComparison: true,
+      isLoadingMbiProgressComparison: hasCachedData ? false : true,
       mbiProgressComparisonError: null,
     });
 
@@ -383,6 +444,11 @@ export const useDashboardMbiStore = create((set, get) => ({
         mbiProgressComparison: response?.data || null,
         isLoadingMbiProgressComparison: false,
         mbiProgressComparisonError: null,
+        isModuleCacheStale: false,
+      });
+
+      persistDashboardMbiCache({
+        mbiProgressComparison: response?.data || null,
       });
     } catch (error) {
       set({
@@ -393,5 +459,17 @@ export const useDashboardMbiStore = create((set, get) => ({
         ),
       });
     }
+  },
+
+  clearMbiCache: () => {
+    clearSessionCache(DASHBOARD_MBI_CACHE_KEY);
+    set({
+      hasLoadedQuestions: false,
+      hasLoadedMyHistory: false,
+      hasLoadedTeachers: false,
+      mbiRetestStatus: null,
+      mbiProgressComparison: null,
+      isModuleCacheStale: true,
+    });
   },
 }));

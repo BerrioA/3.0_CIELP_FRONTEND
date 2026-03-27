@@ -13,6 +13,35 @@ import {
   updateUserService,
 } from "../services/users-management.service";
 import { createAutoDismissNotice } from "../../../shared/lib/autoDismissNotice";
+import {
+  clearSessionCache,
+  readSessionCacheWithMeta,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
+
+const DASHBOARD_USERS_CACHE_KEY = "cielp_dashboard_users_cache_v1";
+const DASHBOARD_USERS_CACHE_TTL_MS = 4 * 60 * 1000;
+
+const initialCacheEntry = readSessionCacheWithMeta(
+  DASHBOARD_USERS_CACHE_KEY,
+  DASHBOARD_USERS_CACHE_TTL_MS,
+);
+
+const initialCache = initialCacheEntry?.payload || {};
+const isInitialCacheStale = Boolean(initialCacheEntry?.isExpired);
+
+const persistUsersCache = (partialPayload = {}) => {
+  const currentCache =
+    readSessionCacheWithMeta(
+      DASHBOARD_USERS_CACHE_KEY,
+      DASHBOARD_USERS_CACHE_TTL_MS,
+    )?.payload || {};
+
+  writeSessionCache(DASHBOARD_USERS_CACHE_KEY, {
+    ...currentCache,
+    ...partialPayload,
+  });
+};
 
 const registerUserNoticeDismiss = createAutoDismissNotice(5500);
 const userActionNoticeDismiss = createAutoDismissNotice(5500);
@@ -24,18 +53,20 @@ const normalizeErrorMessage = (error) =>
   "No fue posible completar la solicitud.";
 
 export const useDashboardUsersStore = create((set, get) => ({
-  users: [],
+  users: Array.isArray(initialCache?.users) ? initialCache.users : [],
   isLoadingUsers: false,
   usersError: null,
-  hasLoadedUsers: false,
+  hasLoadedUsers: Array.isArray(initialCache?.users),
   isRegisteringUser: false,
   registerUserError: null,
   registerUserSuccessMessage: null,
 
-  trashUsers: [],
+  trashUsers: Array.isArray(initialCache?.trashUsers)
+    ? initialCache.trashUsers
+    : [],
   isLoadingTrashUsers: false,
   trashUsersError: null,
-  hasLoadedTrashUsers: false,
+  hasLoadedTrashUsers: Array.isArray(initialCache?.trashUsers),
 
   isProcessingUserAction: false,
   userActionError: null,
@@ -44,22 +75,27 @@ export const useDashboardUsersStore = create((set, get) => ({
   isRegisteringAdditionalInformation: false,
   registerAdditionalInformationError: null,
   registerAdditionalInformationSuccessMessage: null,
-  myAdditionalInformation: null,
+  myAdditionalInformation: initialCache?.myAdditionalInformation || null,
   isLoadingMyAdditionalInformation: false,
   myAdditionalInformationError: null,
-  hasLoadedMyAdditionalInformation: false,
+  hasLoadedMyAdditionalInformation: Boolean(
+    initialCache?.myAdditionalInformation,
+  ),
+  isModuleCacheStale: isInitialCacheStale,
 
   fetchUsers: async ({ force = false } = {}) => {
     if (get().isLoadingUsers) {
       return;
     }
 
-    if (get().hasLoadedUsers && !force) {
+    if (get().hasLoadedUsers && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedUsers;
+
     set({
-      isLoadingUsers: true,
+      isLoadingUsers: hasCachedData ? false : true,
       usersError: null,
     });
 
@@ -70,7 +106,10 @@ export const useDashboardUsersStore = create((set, get) => ({
         isLoadingUsers: false,
         usersError: null,
         hasLoadedUsers: true,
+        isModuleCacheStale: false,
       });
+
+      persistUsersCache({ users: Array.isArray(response) ? response : [] });
     } catch (error) {
       set({
         isLoadingUsers: false,
@@ -84,12 +123,14 @@ export const useDashboardUsersStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedTrashUsers && !force) {
+    if (get().hasLoadedTrashUsers && !force && !get().isModuleCacheStale) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedTrashUsers;
+
     set({
-      isLoadingTrashUsers: true,
+      isLoadingTrashUsers: hasCachedData ? false : true,
       trashUsersError: null,
     });
 
@@ -100,6 +141,11 @@ export const useDashboardUsersStore = create((set, get) => ({
         isLoadingTrashUsers: false,
         trashUsersError: null,
         hasLoadedTrashUsers: true,
+        isModuleCacheStale: false,
+      });
+
+      persistUsersCache({
+        trashUsers: Array.isArray(response) ? response : [],
       });
     } catch (error) {
       set({
@@ -131,6 +177,7 @@ export const useDashboardUsersStore = create((set, get) => ({
         registerUserError: null,
         registerUserSuccessMessage:
           response?.message || "Usuario registrado correctamente.",
+        isModuleCacheStale: true,
       });
 
       registerUserNoticeDismiss.schedule(() => {
@@ -180,6 +227,7 @@ export const useDashboardUsersStore = create((set, get) => ({
         userActionError: null,
         userActionSuccessMessage:
           response?.message || "Usuario actualizado correctamente.",
+        isModuleCacheStale: true,
       });
 
       userActionNoticeDismiss.schedule(() => {
@@ -275,6 +323,7 @@ export const useDashboardUsersStore = create((set, get) => ({
         userActionError: null,
         userActionSuccessMessage:
           response?.message || "Usuario enviado a papelera correctamente.",
+        isModuleCacheStale: true,
       });
 
       userActionNoticeDismiss.schedule(() => {
@@ -321,6 +370,7 @@ export const useDashboardUsersStore = create((set, get) => ({
         userActionError: null,
         userActionSuccessMessage:
           response?.message || "Usuario restaurado correctamente.",
+        isModuleCacheStale: true,
       });
 
       userActionNoticeDismiss.schedule(() => {
@@ -367,6 +417,7 @@ export const useDashboardUsersStore = create((set, get) => ({
         userActionError: null,
         userActionSuccessMessage:
           response?.message || "Usuario eliminado permanentemente.",
+        isModuleCacheStale: true,
       });
 
       userActionNoticeDismiss.schedule(() => {
@@ -417,6 +468,7 @@ export const useDashboardUsersStore = create((set, get) => ({
           response?.message ||
           "Información adicional registrada correctamente.",
         hasLoadedMyAdditionalInformation: false,
+        isModuleCacheStale: true,
       });
 
       additionalInfoNoticeDismiss.schedule(() => {
@@ -452,12 +504,18 @@ export const useDashboardUsersStore = create((set, get) => ({
       return;
     }
 
-    if (get().hasLoadedMyAdditionalInformation && !force) {
+    if (
+      get().hasLoadedMyAdditionalInformation &&
+      !force &&
+      !get().isModuleCacheStale
+    ) {
       return;
     }
 
+    const hasCachedData = get().hasLoadedMyAdditionalInformation;
+
     set({
-      isLoadingMyAdditionalInformation: true,
+      isLoadingMyAdditionalInformation: hasCachedData ? false : true,
       myAdditionalInformationError: null,
     });
 
@@ -469,7 +527,10 @@ export const useDashboardUsersStore = create((set, get) => ({
         isLoadingMyAdditionalInformation: false,
         myAdditionalInformationError: null,
         hasLoadedMyAdditionalInformation: true,
+        isModuleCacheStale: false,
       });
+
+      persistUsersCache({ myAdditionalInformation: response?.data || null });
     } catch (error) {
       set({
         isLoadingMyAdditionalInformation: false,
@@ -495,4 +556,14 @@ export const useDashboardUsersStore = create((set, get) => ({
       registerAdditionalInformationError: null,
       registerAdditionalInformationSuccessMessage: null,
     }),
+
+  clearUsersModuleCache: () => {
+    clearSessionCache(DASHBOARD_USERS_CACHE_KEY);
+    set({
+      hasLoadedUsers: false,
+      hasLoadedTrashUsers: false,
+      hasLoadedMyAdditionalInformation: false,
+      isModuleCacheStale: true,
+    });
+  },
 }));

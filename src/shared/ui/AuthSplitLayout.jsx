@@ -1,7 +1,34 @@
 import { Box, Stack, Typography } from "@mui/material";
+import { motion, useReducedMotion } from "framer-motion";
 import PublicNavbar from "../../features/public/components/PublicNavbar";
 
 function AuthSplitLayout({ title, subtitle, asideTitle, asideText, form }) {
+  const prefersReducedMotion = useReducedMotion();
+
+  const formMotionProps = prefersReducedMotion
+    ? {
+        initial: { opacity: 1 },
+        animate: { opacity: 1 },
+        transition: { duration: 0 },
+      }
+    : {
+        initial: { opacity: 0, y: 12 },
+        animate: { opacity: 1, y: 0 },
+        transition: { duration: 0.24, ease: "easeOut" },
+      };
+
+  const asideMotionProps = prefersReducedMotion
+    ? {
+        initial: { opacity: 1 },
+        animate: { opacity: 1 },
+        transition: { duration: 0 },
+      }
+    : {
+        initial: { opacity: 0, x: 16 },
+        animate: { opacity: 1, x: 0 },
+        transition: { duration: 0.28, ease: "easeOut", delay: 0.04 },
+      };
+
   return (
     <Box sx={{ bgcolor: "background.default" }}>
       <PublicNavbar />
@@ -48,10 +75,22 @@ function AuthSplitLayout({ title, subtitle, asideTitle, asideText, form }) {
             },
           }}
         >
-          <Box sx={{ width: "100%", maxWidth: 520, zIndex: 1 }}>{form}</Box>
+          <Box
+            component={motion.div}
+            initial={formMotionProps.initial}
+            animate={formMotionProps.animate}
+            transition={formMotionProps.transition}
+            sx={{ width: "100%", maxWidth: 520, zIndex: 1 }}
+          >
+            {form}
+          </Box>
         </Box>
 
         <Box
+          component={motion.div}
+          initial={asideMotionProps.initial}
+          animate={asideMotionProps.animate}
+          transition={asideMotionProps.transition}
           sx={{
             display: { xs: "none", md: "flex" },
             bgcolor: "primary.dark",

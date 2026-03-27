@@ -1,6 +1,6 @@
-import { Box, Stack, Typography } from "@mui/material";
-import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Box, CircularProgress, Stack, Typography } from "@mui/material";
+import { lazy, Suspense, useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import PublicOnlyRoute from "./features/auth/components/PublicOnlyRoute";
 import RoleRoute from "./features/auth/components/RoleRoute";
@@ -21,6 +21,12 @@ const VerifyAccountPage = lazy(
   () => import("./features/auth/pages/VerifyAccountPage"),
 );
 const LandingPage = lazy(() => import("./features/public/pages/LandingPage"));
+const PrivacyPolicyPage = lazy(
+  () => import("./features/public/pages/PrivacyPolicyPage"),
+);
+const TermsOfUsePage = lazy(
+  () => import("./features/public/pages/TermsOfUsePage"),
+);
 
 const DashboardShell = lazy(
   () => import("./features/dashboard/layouts/DashboardShell"),
@@ -56,6 +62,141 @@ const DashboardMbiPage = lazy(
   () => import("./features/dashboard/pages/DashboardMbiPage"),
 );
 
+const APP_NAME = "CIELP";
+const GOOGLE_SITE_VERIFICATION =
+  import.meta.env.VITE_GOOGLE_SITE_VERIFICATION || "";
+
+const SEO_DEFAULT = {
+  title: "CIELP | Bienestar docente y analitica institucional",
+  description:
+    "CIELP ayuda a prevenir y abordar el burnout docente con tamizaje, analitica accionable y seguimiento institucional.",
+  robots: "noindex,nofollow",
+};
+
+const SEO_ROUTES = [
+  {
+    match: (pathname) => pathname === "/" || pathname === "/index",
+    title: "CIELP | Bienestar docente y prevencion del burnout",
+    description:
+      "Plataforma de bienestar docente con evaluacion temprana, analitica institucional y acompanamiento para instituciones educativas.",
+    robots: "index,follow",
+  },
+  {
+    match: (pathname) => pathname === "/registro-profesor",
+    title: "Registro de docentes | CIELP",
+    description:
+      "Crea tu cuenta en CIELP para iniciar el tamizaje y el seguimiento de bienestar docente.",
+    robots: "index,follow",
+  },
+  {
+    match: (pathname) => pathname === "/politica-privacidad",
+    title: "Politica de privacidad | CIELP",
+    description:
+      "Conoce como CIELP trata y protege los datos personales de los usuarios.",
+    robots: "index,follow",
+  },
+  {
+    match: (pathname) => pathname === "/terminos-uso",
+    title: "Terminos de uso | CIELP",
+    description:
+      "Consulta las condiciones de acceso y uso de la plataforma CIELP.",
+    robots: "index,follow",
+  },
+  {
+    match: (pathname) => pathname === "/login",
+    title: "Iniciar sesion | CIELP",
+    description: "Accede a tu cuenta institucional en CIELP.",
+    robots: "noindex,nofollow",
+  },
+  {
+    match: (pathname) => pathname === "/forgot-password",
+    title: "Recuperar contrasena | CIELP",
+    description:
+      "Solicita el restablecimiento de tu contrasena para acceder a CIELP.",
+    robots: "noindex,nofollow",
+  },
+  {
+    match: (pathname) => pathname.startsWith("/reset-password"),
+    title: "Restablecer contrasena | CIELP",
+    description: "Actualiza tu contrasena de acceso a la plataforma CIELP.",
+    robots: "noindex,nofollow",
+  },
+  {
+    match: (pathname) => pathname.startsWith("/verify-account"),
+    title: "Verificacion de cuenta | CIELP",
+    description: "Confirma tu cuenta para activar el acceso a CIELP.",
+    robots: "noindex,nofollow",
+  },
+  {
+    match: (pathname) => pathname.startsWith("/dashboard"),
+    title: "Panel institucional | CIELP",
+    description:
+      "Panel de gestion, analitica y seguimiento institucional para bienestar docente.",
+    robots: "noindex,nofollow",
+  },
+];
+
+function ensureMetaTag(key, value, type = "name") {
+  const selector =
+    type === "property" ? `meta[property="${key}"]` : `meta[name="${key}"]`;
+  let tag = document.head.querySelector(selector);
+
+  if (!tag) {
+    tag = document.createElement("meta");
+    tag.setAttribute(type, key);
+    document.head.appendChild(tag);
+  }
+
+  tag.setAttribute("content", value);
+}
+
+function setCanonical(href) {
+  let link = document.head.querySelector('link[rel="canonical"]');
+
+  if (!link) {
+    link = document.createElement("link");
+    link.setAttribute("rel", "canonical");
+    document.head.appendChild(link);
+  }
+
+  link.setAttribute("href", href);
+}
+
+function GlobalSeo() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const seo =
+      SEO_ROUTES.find((entry) => entry.match(location.pathname)) || SEO_DEFAULT;
+    const title = seo.title || SEO_DEFAULT.title;
+    const description = seo.description || SEO_DEFAULT.description;
+    const robots = seo.robots || SEO_DEFAULT.robots;
+
+    document.title = title;
+    document.documentElement.lang = "es-CO";
+
+    ensureMetaTag("description", description);
+    ensureMetaTag("robots", robots);
+    ensureMetaTag("og:site_name", APP_NAME, "property");
+    ensureMetaTag("og:type", "website", "property");
+    ensureMetaTag("og:locale", "es_CO", "property");
+    ensureMetaTag("og:title", title, "property");
+    ensureMetaTag("og:description", description, "property");
+    ensureMetaTag("twitter:card", "summary");
+    ensureMetaTag("twitter:title", title);
+    ensureMetaTag("twitter:description", description);
+
+    if (GOOGLE_SITE_VERIFICATION) {
+      ensureMetaTag("google-site-verification", GOOGLE_SITE_VERIFICATION);
+    }
+
+    const canonicalUrl = `${window.location.origin}${location.pathname}`;
+    setCanonical(canonicalUrl);
+  }, [location.pathname]);
+
+  return null;
+}
+
 function RouteLoader() {
   return (
     <Stack
@@ -78,6 +219,11 @@ function RouteLoader() {
           component="img"
           src="/CIELP.png"
           alt="CIELP"
+          width="142"
+          height="142"
+          loading="eager"
+          fetchPriority="high"
+          decoding="async"
           sx={{
             width: { xs: 118, md: 142 },
             height: "auto",
@@ -126,9 +272,36 @@ function RouteLoader() {
   );
 }
 
+function DashboardContentLoader() {
+  return (
+    <Stack
+      alignItems="center"
+      justifyContent="center"
+      sx={{
+        minHeight: { xs: "38dvh", md: "46dvh" },
+        width: "100%",
+        borderRadius: 1.25,
+        border: "1px solid",
+        borderColor: "divider",
+        bgcolor: "background.paper",
+      }}
+      spacing={1}
+    >
+      <CircularProgress size={24} />
+      <Typography
+        variant="body2"
+        color="text.secondary"
+      >
+        Cargando modulo...
+      </Typography>
+    </Stack>
+  );
+}
+
 function App() {
   return (
     <Suspense fallback={<RouteLoader />}>
+      <GlobalSeo />
       <Routes>
         <Route
           path="/"
@@ -160,6 +333,22 @@ function App() {
             <PublicOnlyRoute>
               <RegisterTeacherPage />
             </PublicOnlyRoute>
+          }
+        />
+        <Route
+          path="/politica-privacidad"
+          element={
+            <Suspense fallback={<RouteLoader />}>
+              <PrivacyPolicyPage />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/terminos-uso"
+          element={
+            <Suspense fallback={<RouteLoader />}>
+              <TermsOfUsePage />
+            </Suspense>
           }
         />
         <Route
@@ -217,7 +406,7 @@ function App() {
           <Route
             index
             element={
-              <Suspense fallback={<RouteLoader />}>
+              <Suspense fallback={<DashboardContentLoader />}>
                 <DashboardHomePage />
               </Suspense>
             }
@@ -226,7 +415,7 @@ function App() {
             path="mbi"
             element={
               <RoleRoute allowedRoles={ALL_USER_ROLES}>
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardMbiPage />
                 </Suspense>
               </RoleRoute>
@@ -243,7 +432,7 @@ function App() {
                   USER_ROLES.DEVELOPER,
                 ]}
               >
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardSpacesPage />
                 </Suspense>
               </RoleRoute>
@@ -253,7 +442,7 @@ function App() {
             path="espacios/:spaceId/inmersion"
             element={
               <RoleRoute allowedRoles={[USER_ROLES.TEACHER]}>
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardSpaceImmersivePage />
                 </Suspense>
               </RoleRoute>
@@ -262,8 +451,15 @@ function App() {
           <Route
             path="espacios/historial"
             element={
-              <RoleRoute allowedRoles={[USER_ROLES.TEACHER]}>
-                <Suspense fallback={<RouteLoader />}>
+              <RoleRoute
+                allowedRoles={[
+                  USER_ROLES.SUPER_ADMIN,
+                  USER_ROLES.ADMIN,
+                  USER_ROLES.PSYCHOLOGIST,
+                  USER_ROLES.TEACHER,
+                ]}
+              >
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardSpacesHistoryPage />
                 </Suspense>
               </RoleRoute>
@@ -273,7 +469,7 @@ function App() {
             path="configuracion"
             element={
               <RoleRoute allowedRoles={ALL_USER_ROLES}>
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardProfilePage />
                 </Suspense>
               </RoleRoute>
@@ -294,7 +490,7 @@ function App() {
               <RoleRoute
                 allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN]}
               >
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardGlobalAnalyticsPage />
                 </Suspense>
               </RoleRoute>
@@ -306,7 +502,7 @@ function App() {
               <RoleRoute
                 allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN]}
               >
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardUsersManagementPage />
                 </Suspense>
               </RoleRoute>
@@ -318,7 +514,7 @@ function App() {
               <RoleRoute
                 allowedRoles={[USER_ROLES.SUPER_ADMIN, USER_ROLES.ADMIN]}
               >
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardUsersTrashPage />
                 </Suspense>
               </RoleRoute>
@@ -334,7 +530,7 @@ function App() {
                   USER_ROLES.PSYCHOLOGIST,
                 ]}
               >
-                <Suspense fallback={<RouteLoader />}>
+                <Suspense fallback={<DashboardContentLoader />}>
                   <DashboardTeachersPage />
                 </Suspense>
               </RoleRoute>

@@ -42,6 +42,10 @@ import { USER_ROLES } from "../config/roles";
 import { useAuthStore } from "../../auth/store/auth.store";
 import { useDashboardPreferencesStore } from "../store/dashboard-preferences.store";
 import { formatRoleLabel } from "../../../shared/lib/roleFormatter";
+import {
+  readSessionCache,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
 import AdditionalInformationOnboardingModal from "../components/AdditionalInformationOnboardingModal";
 import LogoutConfirmDialog from "../components/LogoutConfirmDialog";
 import {
@@ -53,6 +57,11 @@ const DRAWER_WIDTH = {
   regular: 268,
   compact: 88,
 };
+
+const HEADER_ALERTS_CACHE_TTL_MS = 90 * 1000;
+
+const getHeaderAlertsCacheKey = (userUid) =>
+  userUid ? `cielp_header_alerts_cache_${userUid}` : null;
 
 function DashboardShell() {
   const theme = useTheme();
@@ -80,6 +89,54 @@ function DashboardShell() {
   const [currentDateTimeLabel, setCurrentDateTimeLabel] = useState("");
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const prefetchDashboardModules = async () => {
+      if (cancelled) {
+        return;
+      }
+
+      await Promise.allSettled([
+        import("../pages/DashboardHomePage"),
+        import("../pages/DashboardMbiPage"),
+        import("../pages/DashboardSpacesPage"),
+        import("../pages/DashboardSpaceImmersivePage"),
+        import("../pages/DashboardProfilePage"),
+        import("../pages/DashboardUsersManagementPage"),
+        import("../pages/DashboardUsersTrashPage"),
+        import("../pages/DashboardTeachersPage"),
+        import("../pages/DashboardGlobalAnalyticsPage"),
+      ]);
+    };
+
+    if (typeof window !== "undefined") {
+      if (typeof window.requestIdleCallback === "function") {
+        const idleId = window.requestIdleCallback(() => {
+          void prefetchDashboardModules();
+        });
+
+        return () => {
+          cancelled = true;
+          window.cancelIdleCallback(idleId);
+        };
+      }
+
+      const timeoutId = window.setTimeout(() => {
+        void prefetchDashboardModules();
+      }, 1200);
+
+      return () => {
+        cancelled = true;
+        window.clearTimeout(timeoutId);
+      };
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     const formatCurrentDateTime = () =>
@@ -110,13 +167,31 @@ function DashboardShell() {
   useEffect(() => {
     if (!isAuthenticated || userRole !== USER_ROLES.PSYCHOLOGIST) {
       setHeaderAlerts([]);
+      setPendingAlertsCount(0);
+      setIsLoadingHeaderAlerts(false);
       return;
+    }
+
+    const cacheKey = getHeaderAlertsCacheKey(user?.uid);
+    const cachedAlertsPayload = cacheKey
+      ? readSessionCache(cacheKey, HEADER_ALERTS_CACHE_TTL_MS)
+      : null;
+
+    if (cachedAlertsPayload) {
+      setHeaderAlerts(
+        Array.isArray(cachedAlertsPayload?.alerts)
+          ? cachedAlertsPayload.alerts
+          : [],
+      );
+      setPendingAlertsCount(Number(cachedAlertsPayload?.count) || 0);
     }
 
     let isMounted = true;
 
-    const fetchPendingAlerts = async () => {
-      setIsLoadingHeaderAlerts(true);
+    const fetchPendingAlerts = async ({ showLoader = false } = {}) => {
+      if (showLoader) {
+        setIsLoadingHeaderAlerts(true);
+      }
 
       try {
         const response = await getMyBurnoutAlertsApi();
@@ -130,6 +205,13 @@ function DashboardShell() {
         if (isMounted) {
           setPendingAlertsCount(activeAlerts.length);
           setHeaderAlerts(activeAlerts.slice(0, 8));
+
+          if (cacheKey) {
+            writeSessionCache(cacheKey, {
+              alerts: activeAlerts.slice(0, 8),
+              count: activeAlerts.length,
+            });
+          }
         }
       } catch {
         if (isMounted) {
@@ -137,18 +219,23 @@ function DashboardShell() {
           setHeaderAlerts([]);
         }
       } finally {
-        if (isMounted) {
+        if (showLoader && isMounted) {
           setIsLoadingHeaderAlerts(false);
         }
       }
     };
 
-    void fetchPendingAlerts();
+    void fetchPendingAlerts({ showLoader: !cachedAlertsPayload });
+
+    const intervalId = window.setInterval(() => {
+      void fetchPendingAlerts();
+    }, 60000);
 
     return () => {
       isMounted = false;
+      window.clearInterval(intervalId);
     };
-  }, [isAuthenticated, userRole, location.pathname]);
+  }, [isAuthenticated, user?.uid, userRole]);
 
   const drawerWidth = compactModeEnabled
     ? DRAWER_WIDTH.compact
@@ -232,11 +319,27 @@ function DashboardShell() {
     try {
       await markBurnoutAlertAsReadApi(alertId);
 
-      setHeaderAlerts((previousAlerts) =>
-        previousAlerts.filter((alert) => alert.id !== alertId),
-      );
+      setHeaderAlerts((previousAlerts) => {
+        const nextAlerts = previousAlerts.filter(
+          (alert) => alert.id !== alertId,
+        );
+        const cacheKey = getHeaderAlertsCacheKey(user?.uid);
 
-      setPendingAlertsCount((previousCount) => Math.max(0, previousCount - 1));
+        setPendingAlertsCount((previousCount) => {
+          const nextCount = Math.max(0, previousCount - 1);
+
+          if (cacheKey) {
+            writeSessionCache(cacheKey, {
+              alerts: nextAlerts,
+              count: nextCount,
+            });
+          }
+
+          return nextCount;
+        });
+
+        return nextAlerts;
+      });
     } catch {
       // En el header priorizamos no bloquear UX por errores de red puntuales.
     } finally {

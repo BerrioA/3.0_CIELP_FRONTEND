@@ -5,8 +5,15 @@ import {
 } from "../services/preferences.service";
 import { useThemeStore } from "../../../app/store/theme.store";
 import { createAutoDismissNotice } from "../../../shared/lib/autoDismissNotice";
+import {
+  clearSessionCache,
+  readSessionCache,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
 
 const preferencesNoticeDismiss = createAutoDismissNotice(5500);
+const DASHBOARD_PREFERENCES_CACHE_KEY = "cielp_dashboard_preferences_cache_v1";
+const DASHBOARD_PREFERENCES_CACHE_TTL_MS = 15 * 60 * 1000;
 
 const DEFAULT_PREFERENCES = {
   email_notifications_enabled: true,
@@ -15,15 +22,33 @@ const DEFAULT_PREFERENCES = {
   dark_mode_enabled: false,
 };
 
+const readPreferencesCache = () =>
+  readSessionCache(
+    DASHBOARD_PREFERENCES_CACHE_KEY,
+    DASHBOARD_PREFERENCES_CACHE_TTL_MS,
+  );
+
+const persistPreferencesCache = ({ preferences, userUid }) => {
+  writeSessionCache(DASHBOARD_PREFERENCES_CACHE_KEY, {
+    preferences,
+    userUid,
+  });
+};
+
+const initialCache = readPreferencesCache() || {};
+
 const normalizeErrorMessage = (error) =>
   error?.response?.data?.message ||
   error?.response?.data?.error ||
   "No fue posible gestionar las preferencias.";
 
 export const useDashboardPreferencesStore = create((set, get) => ({
-  preferences: DEFAULT_PREFERENCES,
-  loadedForUserUid: null,
-  hasLoadedPreferences: false,
+  preferences: {
+    ...DEFAULT_PREFERENCES,
+    ...(initialCache?.preferences || {}),
+  },
+  loadedForUserUid: initialCache?.userUid || null,
+  hasLoadedPreferences: Boolean(initialCache?.userUid),
   isLoadingPreferences: false,
   isSavingPreferences: false,
   preferencesError: null,
@@ -31,6 +56,7 @@ export const useDashboardPreferencesStore = create((set, get) => ({
 
   resetPreferences: () => {
     preferencesNoticeDismiss.clear();
+    clearSessionCache(DASHBOARD_PREFERENCES_CACHE_KEY);
 
     set({
       preferences: DEFAULT_PREFERENCES,
@@ -55,6 +81,14 @@ export const useDashboardPreferencesStore = create((set, get) => ({
       },
       preferencesSuccessMessage: null,
     }));
+
+    persistPreferencesCache({
+      preferences: {
+        ...get().preferences,
+        [key]: value,
+      },
+      userUid: get().loadedForUserUid,
+    });
 
     if (key === "dark_mode_enabled") {
       useThemeStore.getState().applyDarkModePreference(Boolean(value));
@@ -91,6 +125,11 @@ export const useDashboardPreferencesStore = create((set, get) => ({
         hasLoadedPreferences: true,
         isLoadingPreferences: false,
         preferencesError: null,
+      });
+
+      persistPreferencesCache({
+        preferences: fetchedPreferences,
+        userUid,
       });
 
       useThemeStore
@@ -133,6 +172,11 @@ export const useDashboardPreferencesStore = create((set, get) => ({
         preferencesError: null,
         preferencesSuccessMessage:
           response?.message || "Preferencias actualizadas correctamente.",
+      });
+
+      persistPreferencesCache({
+        preferences: updatedPreferences,
+        userUid: get().loadedForUserUid,
       });
 
       preferencesNoticeDismiss.schedule(() => {

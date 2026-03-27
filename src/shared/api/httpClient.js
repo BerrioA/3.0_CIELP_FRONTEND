@@ -28,6 +28,8 @@ const refreshClient = axios.create({
 
 let refreshPromise = null;
 
+const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
 const sanitizeAccessToken = (value) => {
   if (typeof value !== "string") {
     return null;
@@ -61,7 +63,7 @@ const resolveAccessToken = (payload) => {
 };
 
 const requestNewAccessToken = async () => {
-  try {
+  const tryRefresh = async () => {
     const response = await refreshClient.get("/auth/refresh");
     const newAccessToken = resolveAccessToken(response.data);
 
@@ -73,9 +75,35 @@ const requestNewAccessToken = async () => {
     notifyTokenRefreshed(newAccessToken);
 
     return newAccessToken;
+  };
+
+  const shouldRetryTransientRefreshError = (error) => {
+    const statusCode = error?.response?.status;
+    return !statusCode || statusCode >= 500;
+  };
+
+  const isUnauthorizedRefreshError = (error) => {
+    const statusCode = error?.response?.status;
+    return statusCode === 401 || statusCode === 403;
+  };
+
+  try {
+    try {
+      return await tryRefresh();
+    } catch (error) {
+      if (!shouldRetryTransientRefreshError(error)) {
+        throw error;
+      }
+
+      await wait(450);
+      return await tryRefresh();
+    }
   } catch (error) {
-    clearAccessToken();
-    notifySessionExpired();
+    if (isUnauthorizedRefreshError(error)) {
+      clearAccessToken();
+      notifySessionExpired();
+    }
+
     throw error;
   }
 };

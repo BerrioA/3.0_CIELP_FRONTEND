@@ -79,6 +79,30 @@ const MBI_SCORE_LABELS = {
   6: "Todos los días",
 };
 
+const MBI_DIMENSION_GLOSSARY = [
+  {
+    shortLabel: "CE",
+    title: "Cansancio emocional",
+    description:
+      "Mide el agotamiento emocional frente a las demandas laborales.",
+    color: "#e53935",
+  },
+  {
+    shortLabel: "DP",
+    title: "Despersonalización",
+    description:
+      "Evalúa actitudes de distancia o frialdad hacia otras personas en el trabajo.",
+    color: "#fb8c00",
+  },
+  {
+    shortLabel: "RP",
+    title: "Realización personal",
+    description:
+      "Refleja percepción de logro, competencia y eficacia profesional.",
+    color: "#00897b",
+  },
+];
+
 const getSessionDateObject = (input) => {
   const rawValue =
     typeof input === "object" && input !== null
@@ -1798,7 +1822,7 @@ function DashboardMbiPage() {
                       <Button
                         variant="outlined"
                         onClick={() =>
-                          navigate("/dashboard/espacios/historial")
+                          navigate("/dashboard/espacios?view=historial")
                         }
                       >
                         Ver historial de espacios
@@ -1829,7 +1853,7 @@ function DashboardMbiPage() {
                       <Button
                         variant="outlined"
                         onClick={() =>
-                          navigate("/dashboard/espacios/historial")
+                          navigate("/dashboard/espacios?view=historial")
                         }
                       >
                         Ver historial de espacios
@@ -1902,6 +1926,46 @@ function DashboardMbiPage() {
                     margin={{ left: 50, right: 20, top: 20, bottom: 40 }}
                   />
                 </Box>
+
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 1.2, borderRadius: 1.1 }}
+                >
+                  <Stack spacing={0.8}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      Significado de dimensiones MBI
+                    </Typography>
+
+                    {MBI_DIMENSION_GLOSSARY.map((dimension) => (
+                      <Stack
+                        key={`my-mbi-dimension-${dimension.shortLabel}`}
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={0.8}
+                        alignItems={{ xs: "flex-start", sm: "center" }}
+                      >
+                        <Chip
+                          size="small"
+                          label={dimension.shortLabel}
+                          sx={{
+                            bgcolor: `${dimension.color}1A`,
+                            color: dimension.color,
+                            fontWeight: 700,
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          <strong>{dimension.title}:</strong>{" "}
+                          {dimension.description}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Paper>
               </Stack>
             </Paper>
           ) : null}
@@ -2145,6 +2209,46 @@ function DashboardMbiPage() {
                     margin={{ left: 50, right: 20, top: 20, bottom: 40 }}
                   />
                 </Box>
+
+                <Paper
+                  variant="outlined"
+                  sx={{ p: 1.2, borderRadius: 1.1 }}
+                >
+                  <Stack spacing={0.8}>
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                    >
+                      Significado de dimensiones MBI
+                    </Typography>
+
+                    {MBI_DIMENSION_GLOSSARY.map((dimension) => (
+                      <Stack
+                        key={`teacher-mbi-dimension-${dimension.shortLabel}`}
+                        direction={{ xs: "column", sm: "row" }}
+                        spacing={0.8}
+                        alignItems={{ xs: "flex-start", sm: "center" }}
+                      >
+                        <Chip
+                          size="small"
+                          label={dimension.shortLabel}
+                          sx={{
+                            bgcolor: `${dimension.color}1A`,
+                            color: dimension.color,
+                            fontWeight: 700,
+                          }}
+                        />
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                        >
+                          <strong>{dimension.title}:</strong>{" "}
+                          {dimension.description}
+                        </Typography>
+                      </Stack>
+                    ))}
+                  </Stack>
+                </Paper>
               </Stack>
             </Paper>
           ) : null}

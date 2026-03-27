@@ -7,8 +7,29 @@ import {
   getMySpaceStatsApi,
   startSpaceSessionApi,
 } from "../services/spaces.service";
+import {
+  clearSessionCache,
+  readSessionCache,
+  writeSessionCache,
+} from "../../../shared/lib/sessionCache";
 
 const ACTIVE_SPACE_SESSION_KEY = "cielp_active_space_session";
+const DASHBOARD_SPACES_CACHE_KEY = "cielp_dashboard_spaces_cache_v1";
+const DASHBOARD_SPACES_CACHE_TTL_MS = 5 * 60 * 1000;
+
+const readDashboardSpacesCache = () =>
+  readSessionCache(DASHBOARD_SPACES_CACHE_KEY, DASHBOARD_SPACES_CACHE_TTL_MS);
+
+const persistDashboardSpacesCache = (partialPayload = {}) => {
+  const currentCache = readDashboardSpacesCache() || {};
+
+  writeSessionCache(DASHBOARD_SPACES_CACHE_KEY, {
+    ...currentCache,
+    ...partialPayload,
+  });
+};
+
+const initialCache = readDashboardSpacesCache() || {};
 
 const normalizeErrorMessage = (error, fallback) =>
   error?.response?.data?.message ||
@@ -140,12 +161,12 @@ const normalizeStats = (payload = {}) => {
 };
 
 export const useDashboardSpacesStore = create((set, get) => ({
-  spaces: [],
+  spaces: Array.isArray(initialCache?.spaces) ? initialCache.spaces : [],
   isLoadingSpaces: false,
   spacesError: null,
-  hasLoadedSpaces: false,
+  hasLoadedSpaces: Array.isArray(initialCache?.spaces),
 
-  teacherStats: {
+  teacherStats: initialCache?.teacherStats || {
     overview: {
       total_sessions: 0,
       total_minutes_meditated: 0,
@@ -155,9 +176,9 @@ export const useDashboardSpacesStore = create((set, get) => ({
   },
   isLoadingTeacherStats: false,
   teacherStatsError: null,
-  hasLoadedTeacherStats: false,
+  hasLoadedTeacherStats: Boolean(initialCache?.teacherStats),
 
-  moodHistoryBySpace: {
+  moodHistoryBySpace: initialCache?.moodHistoryBySpace || {
     summary: [],
     weekly_mood_trend: [],
     recent_logs: [],
@@ -165,7 +186,7 @@ export const useDashboardSpacesStore = create((set, get) => ({
   },
   isLoadingMoodHistoryBySpace: false,
   moodHistoryBySpaceError: null,
-  hasLoadedMoodHistoryBySpace: false,
+  hasLoadedMoodHistoryBySpace: Boolean(initialCache?.moodHistoryBySpace),
 
   hydratedActiveSessionForUid: null,
 
@@ -238,6 +259,8 @@ export const useDashboardSpacesStore = create((set, get) => ({
         spacesError: null,
         hasLoadedSpaces: true,
       });
+
+      persistDashboardSpacesCache({ spaces });
     } catch (error) {
       set({
         isLoadingSpaces: false,
@@ -273,6 +296,8 @@ export const useDashboardSpacesStore = create((set, get) => ({
         teacherStatsError: null,
         hasLoadedTeacherStats: true,
       });
+
+      persistDashboardSpacesCache({ teacherStats: normalizedStats });
     } catch (error) {
       set({
         isLoadingTeacherStats: false,
@@ -301,23 +326,27 @@ export const useDashboardSpacesStore = create((set, get) => ({
     try {
       const response = await getSpaceMoodHistoryApi({ days });
 
+      const nextMoodHistory = {
+        summary: Array.isArray(response?.data?.summary)
+          ? response.data.summary
+          : [],
+        weekly_mood_trend: Array.isArray(response?.data?.weekly_mood_trend)
+          ? response.data.weekly_mood_trend
+          : [],
+        recent_logs: Array.isArray(response?.data?.recent_logs)
+          ? response.data.recent_logs
+          : [],
+        metadata: response?.data?.metadata || null,
+      };
+
       set({
-        moodHistoryBySpace: {
-          summary: Array.isArray(response?.data?.summary)
-            ? response.data.summary
-            : [],
-          weekly_mood_trend: Array.isArray(response?.data?.weekly_mood_trend)
-            ? response.data.weekly_mood_trend
-            : [],
-          recent_logs: Array.isArray(response?.data?.recent_logs)
-            ? response.data.recent_logs
-            : [],
-          metadata: response?.data?.metadata || null,
-        },
+        moodHistoryBySpace: nextMoodHistory,
         isLoadingMoodHistoryBySpace: false,
         moodHistoryBySpaceError: null,
         hasLoadedMoodHistoryBySpace: true,
       });
+
+      persistDashboardSpacesCache({ moodHistoryBySpace: nextMoodHistory });
     } catch (error) {
       set({
         isLoadingMoodHistoryBySpace: false,
@@ -447,4 +476,13 @@ export const useDashboardSpacesStore = create((set, get) => ({
       sessionActionSuccessMessage: null,
       lastCompletedSession: null,
     }),
+
+  clearSpacesCache: () => {
+    clearSessionCache(DASHBOARD_SPACES_CACHE_KEY);
+    set({
+      hasLoadedSpaces: false,
+      hasLoadedTeacherStats: false,
+      hasLoadedMoodHistoryBySpace: false,
+    });
+  },
 }));

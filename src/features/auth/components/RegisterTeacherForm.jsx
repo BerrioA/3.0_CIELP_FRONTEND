@@ -207,6 +207,33 @@ function RegisterTeacherForm() {
               control={control}
               render={({ field }) => (
                 <Box>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ mb: 0.7 }}
+                  >
+                    Antes de aceptar, revise la{" "}
+                    <Link
+                      component={RouterLink}
+                      to="/politica-privacidad"
+                      underline="hover"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Politica de privacidad
+                    </Link>{" "}
+                    y los{" "}
+                    <Link
+                      component={RouterLink}
+                      to="/terminos-uso"
+                      underline="hover"
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Terminos de uso
+                    </Link>
+                    .
+                  </Typography>
                   <FormControlLabel
                     control={
                       <Checkbox
